@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Velocity — Internet & Video Stream Speed Test</title>
+<meta name="description" content="Measure ping, jitter, download, upload and video stream strength from 144p to 16K." />
+<meta name="theme-color" content="#05060a" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+          display: ["Sora", "Inter", "sans-serif"],
+          mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  :root { color-scheme: dark; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { background:#05060a; color:#e8ecf7; font-family:Inter, system-ui, sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
+  ::selection { background: rgba(34,211,238,.28); color:#f8fbff; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .eyebrow { font-family:"JetBrains Mono", monospace; font-size:.66rem; letter-spacing:.24em; text-transform:uppercase; color:rgba(203,213,235,.56); }
+  .gradient-text { background: linear-gradient(100deg,#f4f8ff 8%,#9be9f7 44%,#c4b5fd 72%,#f0abfc 96%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+  .ambient { position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden;
+    background:
+      radial-gradient(1200px 700px at 12% -8%, rgba(34,211,238,.16), transparent 62%),
+      radial-gradient(1000px 640px at 88% 4%, rgba(139,92,246,.2), transparent 60%),
+      radial-gradient(900px 700px at 50% 108%, rgba(232,121,249,.12), transparent 62%),
+      linear-gradient(180deg,#05060a 0%,#070811 45%,#05060a 100%); }
+  .ambient::before { content:""; position:absolute; inset:0;
+    background-image: linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px), linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);
+    background-size:64px 64px; mask-image: radial-gradient(circle at 50% 18%, black, transparent 78%); -webkit-mask-image: radial-gradient(circle at 50% 18%, black, transparent 78%); }
+
+  .glass { background: linear-gradient(180deg, rgba(255,255,255,.062), rgba(255,255,255,.018)), rgba(9,11,18,.72);
+    border:1px solid rgba(255,255,255,.09); box-shadow: 0 1px 0 0 rgba(255,255,255,.07) inset, 0 30px 80px -40px rgba(4,6,14,.95);
+    backdrop-filter: blur(22px) saturate(130%); -webkit-backdrop-filter: blur(22px) saturate(130%); }
+  .glass-soft { background: rgba(255,255,255,.028); border:1px solid rgba(255,255,255,.075); box-shadow: 0 1px 0 0 rgba(255,255,255,.05) inset; }
+
+  .btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:.6rem; border-radius:999px; padding:.95rem 1.9rem; font-weight:600; font-size:.95rem;
+    color:#050a12; background: linear-gradient(100deg,#67e8f9 0%,#a5b4fc 48%,#f0abfc 100%);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset, 0 14px 42px -14px rgba(103,232,249,.65), 0 8px 30px -16px rgba(240,171,252,.7);
+    transition: transform .18s ease, box-shadow .22s ease, filter .22s ease; cursor:pointer; }
+  .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.06); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { cursor:not-allowed; opacity:.6; filter:saturate(.7); }
+  .btn-ghost { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px; border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.035); padding:.65rem 1.15rem; font-size:.82rem; font-weight:500; color:rgba(232,236,247,.85); transition: all .18s ease; cursor:pointer; }
+  .btn-ghost:hover { background: rgba(255,255,255,.075); border-color: rgba(255,255,255,.2); color:#fff; }
+  .btn-ghost:disabled { opacity:.45; cursor:not-allowed; }
+
+  .seg { display:flex; align-items:center; gap:4px; border-radius:999px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03); padding:4px; }
+  .seg button { border-radius:999px; padding:6px 12px; font-size:.72rem; font-weight:600; color:#94a3b8; transition: all .18s; cursor:pointer; }
+  .seg button:hover { color:#fff; }
+  .seg button[aria-pressed="true"] { background:#fff; color:#0f172a; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .seg button:disabled { cursor:not-allowed; opacity:.5; }
+
+  .pulse-ring { animation: pulse-ring 2.6s cubic-bezier(.2,.6,.3,1) infinite; }
+  @keyframes pulse-ring { 0%{transform:scale(.82);opacity:.6} 70%{opacity:0} 100%{transform:scale(1.28);opacity:0} }
+  .spin-slow { animation: spin 22s linear infinite; transform-origin: center; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .live-dot { animation: live 1.8s ease-in-out infinite; }
+  @keyframes live { 0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(163,230,53,.55)} 50%{opacity:.55; box-shadow:0 0 0 5px rgba(163,230,53,0)} }
+  .rise { animation: rise .7s cubic-bezier(.16,1,.3,1) both; }
+  @keyframes rise { from {opacity:0; transform: translateY(14px)} to {opacity:1; transform:none} }
+  .ladder-scroll::-webkit-scrollbar { width: 8px; }
+  .ladder-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 999px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
+</style>
+</head>
+<body class="min-h-screen antialiased">
+<div class="ambient" aria-hidden="true"></div>
+
+<!-- ============ HEADER ============ -->
+<header class="sticky top-0 z-40 border-b border-white/[0.06] bg-[#05060a]/75 backdrop-blur-2xl">
+  <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+    <a href="#top" class="flex items-center gap-2.5">
+      <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 via-indigo-400 to-fuchsia-400 text-slate-950 shadow-[0_10px_28px_-12px_rgba(103,232,249,.9)]">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 2.5 5 13.5h5l-1.5 8L18 9.5h-5l.5-7Z"/></svg>
+      </span>
+      <span class="leading-tight">
+        <span class="block font-display text-[0.95rem] font-semibold tracking-tight text-white">velocity</span>
+        <span class="block text-[0.58rem] uppercase tracking-[0.24em] text-slate-500">network diagnostics</span>
+      </span>
+    </a>
+    <nav class="hidden items-center gap-1 text-[0.78rem] text-slate-400 md:flex">
+      <a href="#speed-test" class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white">Speed test</a>
+      <a href="#video" class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white">Video strength</a>
+      <a href="#methodology" class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white">Methodology</a>
+      <a href="#settings" class="rounded-full px-3 py-1.5 hover:bg-white/[0.06] hover:text-white">Settings</a>
+    </nav>
+    <a href="#speed-test" class="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-1.5 text-[0.72rem] font-medium text-white hover:bg-white/[0.1]">Run test</a>
+  </div>
+</header>
+
+<main id="top" class="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+
+  <!-- ============ HERO ============ -->
+  <section class="rise pt-10 text-center sm:pt-14">
+    <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[0.66rem] font-medium text-slate-300">
+      <span class="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-400"></span>
+      Parallel streams · TCP warm-up aware · no compression · no caching
+    </span>
+    <h1 class="mx-auto mt-5 max-w-3xl font-display text-[2.1rem] font-semibold leading-[1.06] tracking-[-0.04em] sm:text-[3.15rem]">
+      <span class="gradient-text">Know exactly how fast</span><br class="hidden sm:block" />
+      <span class="text-white">your internet really is.</span>
+    </h1>
+    <p class="mx-auto mt-4 max-w-xl text-[0.9rem] leading-relaxed text-slate-400 sm:text-[0.96rem]">
+      Measures latency, jitter, download and upload with raw binary streams, then tests whether your connection can play every video rendition from 144p up to 16K.
+    </p>
+  </section>
+
+  <!-- ============ SPEED TEST ============ -->
+  <div id="speed-test" class="mt-8 scroll-mt-20">
+    <div class="grid gap-5 xl:grid-cols-[minmax(0,1.42fr)_minmax(0,1fr)]">
+      <section class="glass relative overflow-hidden rounded-[28px] p-4 sm:p-6">
+        <div class="pointer-events-none absolute -top-32 left-1/2 h-64 w-[70%] -translate-x-1/2 rounded-full bg-cyan-400/10 blur-3xl"></div>
+
+        <div class="relative flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <span id="liveDot" class="h-2 w-2 rounded-full bg-slate-500"></span>
+            <div>
+              <p class="text-[0.82rem] font-medium text-white">Live measurement</p>
+              <p id="headline" class="text-[0.68rem] text-slate-400">Ready when you are.</p>
+            </div>
+          </div>
+          <div class="seg" id="streamSeg">
+            <span class="px-2 text-[0.6rem] uppercase tracking-[0.18em] text-slate-500">Streams</span>
+            <button type="button" data-n="4" aria-pressed="false">4</button>
+            <button type="button" data-n="6" aria-pressed="true">6</button>
+            <button type="button" data-n="8" aria-pressed="false">8</button>
+          </div>
+        </div>
+
+        <div class="relative mt-2 grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)]">
+          <!-- gauge -->
+          <div class="relative mx-auto aspect-square w-full max-w-[400px] select-none">
+            <span id="ring1" class="pulse-ring absolute inset-[16%] hidden rounded-full border border-cyan-300/25"></span>
+            <span id="ring2" class="pulse-ring absolute inset-[16%] hidden rounded-full border border-violet-300/20" style="animation-delay:1.1s"></span>
+            <svg viewBox="0 0 400 400" class="relative h-full w-full">
+              <defs>
+                <linearGradient id="dialStroke" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#22d3ee"/><stop offset="45%" stop-color="#818cf8"/><stop offset="78%" stop-color="#c084fc"/><stop offset="100%" stop-color="#f0abfc"/>
+                </linearGradient>
+                <radialGradient id="dialInner" cx="50%" cy="42%" r="62%">
+                  <stop offset="0%" stop-color="rgba(103,232,249,.11)"/><stop offset="55%" stop-color="rgba(129,140,248,.05)"/><stop offset="100%" stop-color="rgba(5,6,10,0)"/>
+                </radialGradient>
+                <filter id="dialGlow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              <circle cx="200" cy="200" r="154" fill="none" stroke="rgba(255,255,255,.075)" stroke-width="16" stroke-linecap="round" stroke-dasharray="0 1000" id="track" transform="rotate(135 200 200)"/>
+              <circle cx="200" cy="200" r="166" fill="url(#dialInner)"/>
+              <g class="spin-slow" id="spinner" style="animation-play-state:paused">
+                <circle cx="200" cy="200" r="146" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="1" stroke-dasharray="1 9" stroke-linecap="round"/>
+              </g>
+              <g id="ticks"></g>
+              <circle id="arc" cx="200" cy="200" r="154" fill="none" stroke="url(#dialStroke)" stroke-width="16" stroke-linecap="round" stroke-dasharray="0 1000" transform="rotate(135 200 200)" filter="url(#dialGlow)" style="transition: stroke-dasharray .26s cubic-bezier(.22,1,.36,1)"/>
+              <g id="head" style="transition: transform .26s cubic-bezier(.22,1,.36,1)" opacity="0">
+                <circle cx="200" cy="200" r="8" fill="#f8fbff" filter="url(#dialGlow)"/>
+                <circle cx="200" cy="200" r="3" fill="#e0f2fe"/>
+              </g>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span id="phaseLabel" class="eyebrow text-[0.6rem] tracking-[0.32em]">Ready</span>
+              <span id="gaugeValue" class="tabular font-display mt-2 text-[clamp(3rem,13vw,4.3rem)] font-semibold leading-none tracking-[-0.055em] text-white">—</span>
+              <span class="mt-1 text-[0.7rem] font-medium uppercase tracking-[0.28em] text-slate-400">Mbps</span>
+              <span id="gaugeHint" class="mt-3 max-w-[190px] text-[0.7rem] leading-relaxed text-slate-400/80">Tap start to measure this connection</span>
+            </div>
+          </div>
+
+          <!-- metrics + action -->
+          <div class="flex flex-col gap-3">
+            <div class="grid grid-cols-2 gap-2.5">
+              <div id="mPing" class="metric relative overflow-hidden rounded-2xl border border-white/8 bg-white/[0.022] p-3.5 transition-all duration-500">
+                <div class="flex items-center justify-between"><span class="eyebrow text-[0.56rem] tracking-[0.22em]">Ping</span><span class="text-cyan-300 text-xs">◉</span></div>
+                <div class="mt-2 flex items-baseline gap-1"><span id="vPing" class="tabular font-display text-[1.55rem] font-semibold leading-none text-white">—</span><span class="text-[0.66rem] uppercase tracking-wider text-slate-400">ms</span></div>
+                <p id="hPing" class="mt-1.5 truncate text-[0.66rem] text-slate-500">Round-trip probe</p>
+              </div>
+              <div id="mJitter" class="metric relative overflow-hidden rounded-2xl border border-white/8 bg-white/[0.022] p-3.5 transition-all duration-500">
+                <div class="flex items-center justify-between"><span class="eyebrow text-[0.56rem] tracking-[0.22em]">Jitter</span><span class="text-indigo-300 text-xs">≈</span></div>
+                <div class="mt-2 flex items-baseline gap-1"><span id="vJitter" class="tabular font-display text-[1.55rem] font-semibold leading-none text-white">—</span><span class="text-[0.66rem] uppercase tracking-wider text-slate-400">ms</span></div>
+                <p id="hJitter" class="mt-1.5 truncate text-[0.66rem] text-slate-500">Stability drift</p>
+              </div>
+              <div id="mDown" class="metric relative overflow-hidden rounded-2xl border border-white/8 bg-white/[0.022] p-3.5 transition-all duration-500">
+                <div class="flex items-center justify-between"><span class="eyebrow text-[0.56rem] tracking-[0.22em]">Download</span><span class="text-sky-300 text-xs">↓</span></div>
+                <div class="mt-2 flex items-baseline gap-1"><span id="vDown" class="tabular font-display text-[1.55rem] font-semibold leading-none text-white">—</span><span class="text-[0.66rem] uppercase tracking-wider text-slate-400">Mbps</span></div>
+                <p id="hDown" class="mt-1.5 truncate text-[0.66rem] text-slate-500">Inbound stream</p>
+              </div>
+              <div id="mUp" class="metric relative overflow-hidden rounded-2xl border border-white/8 bg-white/[0.022] p-3.5 transition-all duration-500">
+                <div class="flex items-center justify-between"><span class="eyebrow text-[0.56rem] tracking-[0.22em]">Upload</span><span class="text-violet-300 text-xs">↑</span></div>
+                <div class="mt-2 flex items-baseline gap-1"><span id="vUp" class="tabular font-display text-[1.55rem] font-semibold leading-none text-white">—</span><span class="text-[0.66rem] uppercase tracking-wider text-slate-400">Mbps</span></div>
+                <p id="hUp" class="mt-1.5 truncate text-[0.66rem] text-slate-500">Outbound payload</p>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+              <button id="startBtn" type="button" class="btn-primary w-full">⚡ Start speed test</button>
+              <p class="text-center text-[0.66rem] leading-relaxed text-slate-500">Ping → download → upload · first 1.5s of each stream discarded as TCP warm-up</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="errBox" class="relative mt-3 hidden rounded-xl border border-rose-400/30 bg-rose-500/10 px-3.5 py-2.5 text-[0.76rem] text-rose-200"></div>
+
+        <!-- chart -->
+        <div class="relative mt-4 rounded-2xl border border-white/8 bg-[#06070d]/70 p-3.5 sm:p-4">
+          <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <span class="text-[0.78rem] font-medium text-white">Throughput curve</span>
+            <div class="flex items-center gap-3 text-[0.62rem] text-slate-400">
+              <span class="flex items-center gap-1.5"><span class="h-1.5 w-3 rounded-full bg-gradient-to-r from-cyan-300 to-sky-400"></span>Download</span>
+              <span class="flex items-center gap-1.5"><span class="h-1.5 w-3 rounded-full bg-gradient-to-r from-violet-300 to-fuchsia-300"></span>Upload</span>
+              <span class="flex items-center gap-1.5"><span class="h-3 w-2 rounded-sm bg-white/10"></span>Warm-up</span>
+            </div>
+          </div>
+          <div class="relative h-[200px] w-full sm:h-[230px]">
+            <canvas id="chart" class="block h-full w-full"></canvas>
+            <div id="chartEmpty" class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1">
+              <span class="text-[0.78rem] font-medium text-slate-400">Live throughput curve</span>
+              <span class="text-[0.68rem] text-slate-500">Parallel streams render here in real time</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative mt-4 flex flex-wrap items-center gap-2 text-[0.7rem]">
+          <span id="stepPing" class="rounded-full border border-white/10 px-3 py-1.5 text-slate-400">Latency</span>
+          <span class="h-px w-4 bg-white/10"></span>
+          <span id="stepDown" class="rounded-full border border-white/10 px-3 py-1.5 text-slate-400">Download</span>
+          <span class="h-px w-4 bg-white/10"></span>
+          <span id="stepUp" class="rounded-full border border-white/10 px-3 py-1.5 text-slate-400">Upload</span>
+        </div>
+      </section>
+
+      <!-- side column -->
+      <div class="flex flex-col gap-5">
+        <section class="glass relative overflow-hidden rounded-[28px] p-5 sm:p-6">
+          <div class="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-violet-500/20 blur-3xl"></div>
+          <div class="relative flex items-start justify-between gap-3">
+            <div>
+              <p class="eyebrow">Session result</p>
+              <h2 id="gradeLabel" class="mt-1 font-display text-lg font-semibold tracking-tight text-white">Awaiting measurement</h2>
+            </div>
+            <div id="gradeLetter" class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-400 to-slate-500 font-display text-xl font-bold text-slate-900">—</div>
+          </div>
+          <p id="gradeBlurb" class="relative mt-1.5 text-[0.76rem] leading-relaxed text-slate-400">Run a test to grade this connection.</p>
+          <div class="relative mt-4 grid grid-cols-2 gap-2.5">
+            <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p class="eyebrow text-[0.54rem] text-cyan-300">Download</p><p class="tabular mt-1 font-display text-xl font-semibold text-white"><span id="sDown">—</span><span class="ml-1 text-[0.6rem] text-slate-500">Mbps</span></p></div>
+            <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p class="eyebrow text-[0.54rem] text-fuchsia-300">Upload</p><p class="tabular mt-1 font-display text-xl font-semibold text-white"><span id="sUp">—</span><span class="ml-1 text-[0.6rem] text-slate-500">Mbps</span></p></div>
+            <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p class="eyebrow text-[0.54rem] text-sky-300">Ping</p><p class="tabular mt-1 font-display text-xl font-semibold text-white"><span id="sPing">—</span><span class="ml-1 text-[0.6rem] text-slate-500">ms</span></p></div>
+            <div class="rounded-xl border border-white/8 bg-white/[0.025] p-3"><p class="eyebrow text-[0.54rem] text-indigo-300">Jitter</p><p class="tabular mt-1 font-display text-xl font-semibold text-white"><span id="sJitter">—</span><span class="ml-1 text-[0.6rem] text-slate-500">ms</span></p></div>
+          </div>
+          <div class="relative mt-4 flex items-center gap-2">
+            <button id="copyBtn" type="button" class="btn-ghost flex-1" disabled>Copy result</button>
+            <span id="savedBadge" class="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[0.64rem] text-slate-400">Private</span>
+          </div>
+        </section>
+
+        <section class="glass rounded-[28px] p-5 sm:p-6">
+          <p class="eyebrow">Measurement path</p>
+          <dl class="mt-3 space-y-2.5 text-[0.78rem]">
+            <div class="flex justify-between gap-3"><dt class="text-slate-400">Test host</dt><dd id="iHost" class="max-w-[60%] truncate text-right font-medium text-slate-100">—</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-slate-400">Protocol</dt><dd id="iProto" class="font-medium text-slate-100">—</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-slate-400">Network type</dt><dd id="iNet" class="font-medium text-slate-100">—</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-slate-400">Parallel streams</dt><dd id="iStreams" class="font-medium text-slate-100">6 connections</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-slate-400">Client</dt><dd id="iClient" class="max-w-[60%] truncate text-right font-medium text-slate-100">—</dd></div>
+          </dl>
+        </section>
+      </div>
+    </div>
+
+    <!-- stats strip -->
+    <section class="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div class="glass-soft rounded-2xl p-4"><p class="text-[0.64rem] uppercase tracking-[0.16em] text-slate-500">Tests run</p><p id="stTests" class="tabular mt-1.5 font-display text-2xl font-semibold text-white">0</p></div>
+      <div class="glass-soft rounded-2xl p-4"><p class="text-[0.64rem] uppercase tracking-[0.16em] text-slate-500">Average download</p><p class="tabular mt-1.5 font-display text-2xl font-semibold text-cyan-200"><span id="stAvgDown">—</span><span class="ml-1.5 text-[0.62rem] text-slate-500">MBPS</span></p></div>
+      <div class="glass-soft rounded-2xl p-4"><p class="text-[0.64rem] uppercase tracking-[0.16em] text-slate-500">Peak download</p><p class="tabular mt-1.5 font-display text-2xl font-semibold text-violet-200"><span id="stPeakDown">—</span><span class="ml-1.5 text-[0.62rem] text-slate-500">MBPS</span></p></div>
+      <div class="glass-soft rounded-2xl p-4"><p class="text-[0.64rem] uppercase tracking-[0.16em] text-slate-500">Average ping</p><p class="tabular mt-1.5 font-display text-2xl font-semibold text-emerald-200"><span id="stAvgPing">—</span><span class="ml-1.5 text-[0.62rem] text-slate-500">MS</span></p></div>
+    </section>
+
+    <!-- speed history -->
+    <section class="glass mt-5 overflow-hidden rounded-[28px]">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4 sm:px-6">
+        <div>
+          <p class="eyebrow">Local history</p>
+          <h2 class="mt-1 font-display text-base font-semibold tracking-tight text-white">Recent measurements</h2>
+        </div>
+        <button id="clearBtn" type="button" class="btn-ghost text-[0.7rem]">Clear history</button>
+      </div>
+      <div id="historyEmpty" class="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+        <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-cyan-300">⚡</span>
+        <p class="text-[0.85rem] font-medium text-slate-200">No runs recorded yet</p>
+        <p class="max-w-sm text-[0.72rem] text-slate-500">Completed tests are saved in this browser and appear here.</p>
+      </div>
+      <div class="hidden overflow-x-auto" id="historyWrap">
+        <table class="w-full border-collapse text-left text-[0.78rem]">
+          <thead><tr class="text-[0.6rem] uppercase tracking-[0.16em] text-slate-500">
+            <th class="px-5 py-2.5 font-medium sm:px-6">When</th><th class="px-3 py-2.5 font-medium">Download</th><th class="px-3 py-2.5 font-medium">Upload</th><th class="px-3 py-2.5 font-medium">Ping</th><th class="px-3 py-2.5 font-medium">Jitter</th><th class="px-3 py-2.5 font-medium">Streams</th>
+          </tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ VIDEO STRENGTH ============ -->
+  <section id="video" class="mt-14 scroll-mt-20">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="eyebrow">Video stream strength</p>
+        <h2 class="mt-1.5 font-display text-2xl font-semibold tracking-tight text-white sm:text-[1.75rem]">From 144p to 16K — what actually plays?</h2>
+        <p class="mt-1.5 max-w-xl text-[0.82rem] leading-relaxed text-slate-400">Real binary segments are pulled for every rendition and raced against their own playback duration. A tier passes only when it sustains its bitrate with headroom.</p>
+      </div>
+      <div class="seg self-start" id="videoSeg">
+        <button type="button" data-mode="quick" aria-pressed="true">Quick ladder</button>
+        <button type="button" data-mode="sweep" aria-pressed="false">Full sweep</button>
+      </div>
+    </div>
+
+    <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.28fr)]">
+      <div class="glass relative overflow-hidden rounded-[28px] p-4 sm:p-5">
+        <div class="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full bg-fuchsia-500/15 blur-3xl"></div>
+        <div class="relative overflow-hidden rounded-2xl border border-white/10 bg-[#06070d]">
+          <div class="flex items-center justify-between border-b border-white/8 px-3 py-2">
+            <div class="flex items-center gap-2"><span id="pvDot" class="h-1.5 w-1.5 rounded-full bg-slate-500"></span><span class="eyebrow text-[0.54rem] tracking-[0.2em]" id="pvTitle">Preview idle</span></div>
+            <span id="pvRes" class="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 mono text-[0.58rem] text-cyan-200">—</span>
+          </div>
+          <div class="relative aspect-video w-full">
+            <canvas id="preview" class="block h-full w-full"></canvas>
+            <div class="pointer-events-none absolute inset-0 flex flex-col justify-between p-3">
+              <div class="flex items-start justify-between">
+                <span id="pvLabel" class="rounded-lg border border-white/15 bg-black/40 px-2 py-1 font-display text-[0.7rem] font-semibold text-white backdrop-blur-sm">—</span>
+                <span id="pvState" class="rounded-full border border-white/12 bg-black/35 px-2 py-0.5 text-[0.56rem] font-medium uppercase tracking-[0.14em] text-slate-300">Standby</span>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between text-[0.56rem] uppercase tracking-[0.16em] text-slate-300/80"><span id="pvBuf">Buffer 2.5s</span><span id="pvFactor">awaiting segment</span></div>
+                <div class="h-1.5 overflow-hidden rounded-full bg-white/10"><div id="pvBufBar" class="h-full rounded-full bg-gradient-to-r from-cyan-300 via-indigo-300 to-fuchsia-300 transition-[width] duration-300" style="width:0%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative mt-4 flex items-end justify-between gap-3">
+          <div>
+            <p class="eyebrow">Max sustainable rendition</p>
+            <p id="maxRes" class="mt-1 font-display text-[2rem] font-semibold leading-none tracking-[-0.04em] text-white">—</p>
+            <p id="maxDesc" class="mt-1 text-[0.68rem] text-slate-500">Run the ladder to find your ceiling</p>
+          </div>
+          <div class="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[0.62rem] text-slate-400"><span id="vidDot" class="h-1.5 w-1.5 rounded-full bg-slate-500"></span><span id="vidState">Idle</span></div>
+        </div>
+
+        <div class="relative mt-3 grid grid-cols-3 gap-2">
+          <div class="rounded-xl border border-white/8 bg-white/[0.025] p-2.5"><p class="eyebrow text-[0.5rem] text-cyan-300">Peak</p><p class="tabular mt-1 font-display text-base font-semibold text-white"><span id="vPeak">—</span><span class="ml-1 text-[0.55rem] text-slate-500">MBPS</span></p></div>
+          <div class="rounded-xl border border-white/8 bg-white/[0.025] p-2.5"><p class="eyebrow text-[0.5rem] text-indigo-300">Startup</p><p class="tabular mt-1 font-display text-base font-semibold text-white"><span id="vStart">—</span><span class="ml-1 text-[0.55rem] text-slate-500">MS</span></p></div>
+          <div class="rounded-xl border border-white/8 bg-white/[0.025] p-2.5"><p class="eyebrow text-[0.5rem] text-fuchsia-300">Stalls</p><p class="tabular mt-1 font-display text-base font-semibold text-white"><span id="vStall">—</span><span class="ml-1 text-[0.55rem] text-slate-500" id="vStallUnit">SEGS</span></p></div>
+        </div>
+
+        <button id="videoBtn" type="button" class="btn-primary relative mt-3 w-full">⚡ Test video stream strength</button>
+        <p id="videoNote" class="relative mt-2 text-center text-[0.64rem] leading-relaxed text-slate-500">3 segments per rendition · 360p → 16K · stops after two failures</p>
+        <div id="videoErr" class="relative mt-3 hidden rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-[0.72rem] text-rose-200"></div>
+      </div>
+
+      <div class="glass overflow-hidden rounded-[28px]">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/8 px-4 py-3.5 sm:px-5">
+          <div>
+            <p class="eyebrow">Rendition ladder</p>
+            <p id="ladderSub" class="mt-0.5 text-[0.7rem] text-slate-400">All ten renditions, measured with real segment transfers</p>
+          </div>
+          <div class="flex items-center gap-2 text-[0.58rem] text-slate-500">
+            <span class="flex items-center gap-1"><span class="h-2.5 w-px bg-white/40"></span>1×</span>
+            <span class="flex items-center gap-1"><span class="h-1.5 w-3 rounded-full bg-gradient-to-r from-emerald-300 to-cyan-300"></span>smooth</span>
+            <span class="flex items-center gap-1"><span class="h-1.5 w-3 rounded-full bg-gradient-to-r from-rose-400 to-amber-300"></span>buffers</span>
+          </div>
+        </div>
+        <div id="ladder" class="ladder-scroll max-h-[540px] space-y-1.5 overflow-y-auto p-3 sm:p-4"></div>
+        <div class="border-t border-white/8 bg-white/[0.015] px-4 py-3 sm:px-5">
+          <p id="verdict" class="text-[0.72rem] leading-relaxed text-slate-400">Each rendition must pull its bitrate faster than it plays. We stream real binary segments for every resolution and compute the real-time factor.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 glass rounded-2xl p-4">
+      <div class="flex items-center justify-between">
+        <p class="eyebrow">Recent video sweeps</p>
+        <button id="clearVideoBtn" type="button" class="btn-ghost text-[0.66rem] !py-1.5">Clear</button>
+      </div>
+      <ul id="videoHistory" class="mt-2 divide-y divide-white/5 text-[0.72rem] text-slate-500"><li class="py-3">No video sweeps recorded yet.</li></ul>
+    </div>
+  </section>
+
+  <!-- ============ METHODOLOGY ============ -->
+  <section id="methodology" class="mt-14 scroll-mt-20">
+    <p class="eyebrow">How the measurement works</p>
+    <h2 class="mt-1.5 font-display text-2xl font-semibold tracking-tight text-white">Four phases, zero guesswork.</h2>
+    <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <article class="glass-soft rounded-2xl p-4"><span class="font-mono text-[0.6rem] text-slate-600">01</span><h3 class="mt-2 text-[0.86rem] font-semibold text-white">Latency & jitter</h3><p class="mt-1.5 text-[0.73rem] leading-relaxed text-slate-400">Small GET probes timed with <code class="mono text-cyan-200">performance.now()</code>. Jitter is the mean delta between consecutive round trips.</p></article>
+      <article class="glass-soft rounded-2xl p-4"><span class="font-mono text-[0.6rem] text-slate-600">02</span><h3 class="mt-2 text-[0.86rem] font-semibold text-white">Streamed download</h3><p class="mt-1.5 text-[0.73rem] leading-relaxed text-slate-400">Parallel binary streams consumed through <code class="mono text-cyan-200">ReadableStream</code> and <code class="mono text-cyan-200">response.body.getReader()</code>, counting raw octets.</p></article>
+      <article class="glass-soft rounded-2xl p-4"><span class="font-mono text-[0.6rem] text-slate-600">03</span><h3 class="mt-2 text-[0.86rem] font-semibold text-white">Verified upload</h3><p class="mt-1.5 text-[0.73rem] leading-relaxed text-slate-400">Incompressible blobs from <code class="mono text-cyan-200">crypto.getRandomValues()</code> are POSTed in parallel, tracked via <code class="mono text-cyan-200">xhr.upload.onprogress</code>.</p></article>
+      <article class="glass-soft rounded-2xl p-4"><span class="font-mono text-[0.6rem] text-slate-600">04</span><h3 class="mt-2 text-[0.86rem] font-semibold text-white">Honest scoring</h3><p class="mt-1.5 text-[0.73rem] leading-relaxed text-slate-400">The first 1.5 seconds of every stream is discarded so TCP slow-start cannot skew the result. Every request uses a unique <code class="mono text-cyan-200">?t=</code> cache-buster.</p></article>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="settings" class="mt-12 scroll-mt-20">
+    <div class="glass rounded-[28px] p-5 sm:p-7">
+      <p class="eyebrow">Configuration</p>
+      <h2 class="mt-1.5 font-display text-xl font-semibold tracking-tight text-white">Test server</h2>
+      <p class="mt-2 max-w-2xl text-[0.8rem] leading-relaxed text-slate-400">
+        This page is a single self-contained file. By default it measures against Cloudflare's public speed-test endpoints (CORS-enabled). To test against your own server, set <code class="mono text-cyan-200">BASE_URL</code> to a server that implements <code class="mono text-cyan-200">GET /ping</code>, <code class="mono text-cyan-200">GET /download?bytes=</code> and <code class="mono text-cyan-200">POST /upload</code> with CORS enabled.
+      </p>
+      <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+        <input id="baseUrl" type="url" class="flex-1 rounded-xl border border-white/10 bg-[#06070d] px-3.5 py-2.5 mono text-[0.78rem] text-slate-200 outline-none focus:border-cyan-300/50" placeholder="https://speed.cloudflare.com" />
+        <button id="saveBase" type="button" class="btn-ghost">Save server</button>
+        <button id="resetBase" type="button" class="btn-ghost">Reset default</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="border-t border-white/[0.06] bg-[#05060a]/60">
+  <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-[0.7rem] text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <span><span class="font-medium text-slate-300">Velocity</span> — honest network diagnostics</span>
+    <span>Single-file build · HTML · Tailwind CSS · Canvas · Fetch streams · XHR upload</span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------------- configuration ---------------- */
+  const DEFAULT_BASE = "https://speed.cloudflare.com";
+  const CONFIG_KEY = "velocity.baseUrl";
+  const HISTORY_KEY = "velocity.history.v1";
+  const VIDEO_KEY = "velocity.video.v1";
+
+  const PLAN = {
+    pingSamples: 12, pingWarmup: 2,
+    warmupMs: 1500, downloadMs: 10500, uploadMs: 10500,
+    downloadChunk: 25 * 1024 * 1024,   // per request
+    uploadPayload: 4 * 1024 * 1024,
+    segmentsPerTier: 3,
+  };
+
+  // Endpoint builders: swap these to point at a custom backend.
+  const endpoints = (base) => ({
+    ping: (t) => `${base}/__down?bytes=0&t=${t}`,
+    download: (bytes, t) => `${base}/__down?bytes=${bytes}&t=${t}`,
+    upload: (t) => `${base}/__up?t=${t}`,
+  });
+
+  const TIERS = [
+    { id: "144p",  label: "Nano",      height: 144,  width: 256,   bitrate: 0.2,  codec: "H.264", hdr: false },
+    { id: "240p",  label: "Tiny",      height: 240,  width: 426,   bitrate: 0.45, codec: "H.264", hdr: false },
+    { id: "360p",  label: "SD",        height: 360,  width: 640,   bitrate: 0.8,  codec: "H.264", hdr: false },
+    { id: "480p",  label: "SD+",       height: 480,  width: 854,   bitrate: 1.4,  codec: "H.264", hdr: false },
+    { id: "720p",  label: "HD",        height: 720,  width: 1280,  bitrate: 2.8,  codec: "H.264", hdr: false },
+    { id: "1080p", label: "Full HD",   height: 1080, width: 1920,  bitrate: 5,    codec: "H.264", hdr: true  },
+    { id: "1440p", label: "QHD",       height: 1440, width: 2560,  bitrate: 10,   codec: "VP9",   hdr: true  },
+    { id: "2160p", label: "4K UHD",    height: 2160, width: 3840,  bitrate: 22,   codec: "H.265", hdr: true  },
+    { id: "4320p", label: "8K UHD",    height: 4320, width: 7680,  bitrate: 65,   codec: "H.265", hdr: true  },
+    { id: "8640p", label: "16K",       height: 8640, width: 15360, bitrate: 180,  codec: "AV1",   hdr: true  },
+  ];
+
+  const VERDICTS = {
+    smooth:     { label: "Plays smoothly",        short: "Smooth",     cls: "text-emerald-300 border-emerald-300/30 bg-emerald-300/10", dot: "bg-emerald-300", bar: "from-emerald-300 via-cyan-300 to-sky-300" },
+    tight:      { label: "Plays, little headroom", short: "Tight",      cls: "text-cyan-300 border-cyan-300/30 bg-cyan-300/10",         dot: "bg-cyan-300",    bar: "from-cyan-300 via-sky-300 to-indigo-300" },
+    borderline: { label: "Borderline buffering",   short: "Borderline", cls: "text-amber-300 border-amber-300/30 bg-amber-300/10",     dot: "bg-amber-300",   bar: "from-amber-300 via-orange-300 to-amber-200" },
+    buffering:  { label: "Buffers constantly",     short: "Buffers",    cls: "text-rose-300 border-rose-300/30 bg-rose-300/10",        dot: "bg-rose-300",    bar: "from-rose-400 via-rose-300 to-amber-300" },
+    untested:   { label: "Not attempted",          short: "Skipped",    cls: "text-slate-400 border-white/10 bg-white/[0.03]",         dot: "bg-slate-500",   bar: "from-slate-600 to-slate-500" },
+  };
+
+  /* ---------------- helpers ---------------- */
+  const $ = (id) => document.getElementById(id);
+  const now = () => performance.now();
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const token = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const median = (arr) => { if (!arr.length) return 0; const s = [...arr].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const fmtSpeed = (v) => { if (!isFinite(v) || v <= 0) return "—"; if (v >= 1000) return Math.round(v).toLocaleString("en-US"); if (v >= 100) return v.toFixed(0); if (v >= 10) return v.toFixed(1); return v.toFixed(2); };
+  const fmtMs = (v) => { if (v == null || !isFinite(v)) return "—"; return v >= 100 ? v.toFixed(0) : v.toFixed(1); };
+  const fmtBytes = (b) => { if (!(b > 0)) return "0 MB"; const u = ["B","KB","MB","GB","TB"]; let i = 0; let x = b; while (x >= 1024 && i < u.length - 1) { x /= 1024; i++; } return `${x.toFixed(x >= 10 || i === 0 ? 0 : 1)} ${u[i]}`; };
+  const relTime = (ts) => { const d = Date.now() - ts; if (d < 45000) return "just now"; const m = Math.round(d / 60000); if (m < 60) return `${m}m ago`; const h = Math.round(m / 60); if (h < 24) return `${h}h ago`; const days = Math.round(h / 24); if (days < 7) return `${days}d ago`; return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" }); };
+  const describeClient = () => {
+    const ua = navigator.userAgent;
+    const os = /Mac/.test(ua) ? "macOS" : /Win/.test(ua) ? "Windows" : /Android/.test(ua) ? "Android" : /iPhone|iPad/.test(ua) ? "iOS" : /Linux/.test(ua) ? "Linux" : "Device";
+    const br = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "Browser";
+    return `${br} · ${os}`;
+  };
+  const gaugeStops = [0, 1, 5, 10, 25, 50, 100, 250, 500, 1000];
+  const gaugeFraction = (s) => {
+    if (!(s > 0)) return 0; if (s >= 1000) return 1;
+    for (let i = 1; i < gaugeStops.length; i++) if (s <= gaugeStops[i]) { const a = gaugeStops[i - 1], b = gaugeStops[i]; return (i - 1 + (s - a) / (b - a)) / (gaugeStops.length - 1); }
+    return 1;
+  };
+  const gradeFor = (down, up, ping) => {
+    if (!down) return { letter: "—", label: "Not measured", blurb: "Run a test to grade this connection.", grad: "from-slate-400 to-slate-500" };
+    const score = down * 0.5 + (up || 0) * 0.3 + Math.max(0, 40 - (ping || 40)) * 0.5;
+    if (score >= 260) return { letter: "A+", label: "Fiber class", blurb: "Gigabit-grade throughput with headroom to spare.", grad: "from-cyan-300 to-emerald-300" };
+    if (score >= 140) return { letter: "A", label: "Excellent", blurb: "Ready for 4K streams, big uploads and cloud work.", grad: "from-cyan-300 to-violet-300" };
+    if (score >= 75) return { letter: "B", label: "Very good", blurb: "Comfortable for video calls, gaming and streaming.", grad: "from-sky-300 to-indigo-300" };
+    if (score >= 35) return { letter: "C", label: "Everyday", blurb: "Fine for browsing and HD, tighter on heavy transfers.", grad: "from-amber-300 to-orange-300" };
+    return { letter: "D", label: "Limited", blurb: "Heavy downloads will feel slow. Try a wired connection.", grad: "from-rose-300 to-amber-300" };
+  };
+  const verdictFromFactor = (f) => !(f > 0) ? "untested" : f >= 1.45 ? "smooth" : f >= 1.12 ? "tight" : f >= 0.92 ? "borderline" : "buffering";
+
+  /* ---------------- settings ---------------- */
+  let BASE = (localStorage.getItem(CONFIG_KEY) || DEFAULT_BASE).replace(/\/+$/, "");
+  let EP = endpoints(BASE);
+  const applyBase = (url) => { BASE = url.replace(/\/+$/, ""); EP = endpoints(BASE); $("iHost").textContent = new URL(BASE).host; };
+
+  /* ---------------- state ---------------- */
+  let streams = 6;
+  let running = false;
+  let abortCtl = null;
+  let session = null;      // { down, up, ping, jitter }
+  let downSamples = [], upSamples = [];
+  let videoMode = "quick";
+  let videoRunning = false;
+  let videoAbort = null;
+  let videoLadder = TIERS.map((t) => ({ tier: t, tested: false, mbps: 0, factor: 0, verdict: "untested", bytes: 0, startup: 0, stalls: 0, segs: 0 }));
+  let videoSummary = null;
+  let warmupFlag = false;
+
+  /* ---------------- phase UI ---------------- */
+  const setPhase = (phase) => {
+    const map = { idle: ["Ready", "Tap start to measure this connection"], ping: ["Latency", "Probing round-trip time & jitter"], download: ["Download", "Measuring inbound throughput"], upload: ["Upload", "Measuring outbound throughput"], complete: ["Test complete", "Results verified and saved"] };
+    const [label, hint] = map[phase];
+    $("phaseLabel").textContent = label;
+    $("gaugeHint").textContent = hint;
+    const active = phase === "ping" || phase === "download" || phase === "upload";
+    $("liveDot").className = `h-2 w-2 rounded-full ${active ? "live-dot bg-lime-300" : "bg-slate-500"}`;
+    $("ring1").classList.toggle("hidden", !active);
+    $("ring2").classList.toggle("hidden", !active);
+    $("spinner").style.animationPlayState = active ? "running" : "paused";
+    ["stepPing", "stepDown", "stepUp"].forEach((id, i) => {
+      const order = { ping: 0, download: 1, upload: 2 }[phase];
+      const el = $(id);
+      let state = "pending";
+      if (phase === "complete") state = "done";
+      else if (order !== undefined) state = i < order ? "done" : i === order ? "active" : "pending";
+      el.className = "rounded-full border px-3 py-1.5 " + (state === "done" ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-200" : state === "active" ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-slate-400");
+    });
+    $("startBtn").disabled = false;
+    $("startBtn").textContent = running ? "■ Stop test" : (session ? "⚡ Run test again" : "⚡ Start speed test");
+    $("headline").textContent = phase === "complete" ? "Your connection, quantified." : active ? "Measuring live throughput…" : "Ready when you are.";
+  };
+
+  const setGauge = (mbps, visible = true) => {
+    const frac = Math.min(1, Math.max(0, gaugeFraction(mbps)));
+    const L = 0.75 * 2 * Math.PI * 154;
+    $("arc").setAttribute("stroke-dasharray", `${(L * frac).toFixed(2)} 1000`);
+    $("track").setAttribute("stroke-dasharray", `${L.toFixed(2)} 1000`);
+    const a = ((135 + frac * 270) * Math.PI) / 180;
+    const hx = 200 + 154 * Math.cos(a), hy = 200 + 154 * Math.sin(a);
+    const head = $("head");
+    head.setAttribute("transform", `translate(${hx - 200} ${hy - 200})`);
+    head.setAttribute("opacity", visible && frac > 0.005 ? "1" : "0");
+    $("gaugeValue").textContent = visible && mbps > 0 ? fmtSpeed(mbps) : "—";
+  };
+
+  const buildTicks = () => {
+    const g = $("ticks"); let html = "";
+    for (let i = 0; i < 46; i++) {
+      const f = i / 45, major = i % 5 === 0;
+      const a = ((135 + f * 270) * Math.PI) / 180;
+      const r1 = 167, r2 = major ? 178 : 172;
+      html += `<line x1="${200 + r1 * Math.cos(a)}" y1="${200 + r1 * Math.sin(a)}" x2="${200 + r2 * Math.cos(a)}" y2="${200 + r2 * Math.sin(a)}" stroke="${major ? "rgba(226,232,245,.42)" : "rgba(226,232,245,.16)"}" stroke-width="${major ? 1.6 : 1}" stroke-linecap="round"/>`;
+    }
+    [[0, "0"], [5, "5"], [25, "25"], [100, "100"], [500, "500"], [1000, "1G"]].forEach(([v, label]) => {
+      const a = ((135 + gaugeFraction(v) * 270) * Math.PI) / 180;
+      const r = 120;
+      html += `<text x="${200 + r * Math.cos(a)}" y="${200 + r * Math.sin(a) + 3}" text-anchor="middle" font-size="10" fill="rgba(203,213,235,.42)" font-family="JetBrains Mono, monospace">${label}</text>`;
+    });
+    g.innerHTML = html;
+  };
+
+  /* ---------------- chart ---------------- */
+  const chart = $("chart");
+  const drawChart = () => {
+    const wrap = chart.parentElement;
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    chart.width = w * dpr; chart.height = h * dpr;
+    const ctx = chart.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const pad = { t: 14, r: 12, b: 24, l: 42 };
+    const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+    const span = PLAN.downloadMs / 1000 + PLAN.uploadMs / 1000;
+    const peak = Math.max(0, ...downSamples.map((s) => s.mbps), ...upSamples.map((s) => s.mbps));
+    const target = Math.max(10, peak * 1.18);
+    const p10 = Math.pow(10, Math.floor(Math.log10(target)));
+    const yMax = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].map((c) => c * p10).find((v) => v >= target) || 10 * p10;
+    const X = (s) => pad.l + (s / span) * pw;
+    const Y = (m) => pad.t + ph - (Math.min(m, yMax) / yMax) * ph;
+    ctx.font = "500 10px 'JetBrains Mono', monospace";
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i++) {
+      const v = (yMax / 4) * i, y = Y(v);
+      ctx.strokeStyle = i === 0 ? "rgba(255,255,255,.14)" : "rgba(255,255,255,.065)";
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+      ctx.fillStyle = "rgba(203,213,235,.45)";
+      ctx.fillText(v >= 100 ? v.toFixed(0) : v.toFixed(1), pad.l - 10, y);
+    }
+    const warm = (PLAN.warmupMs / 1000 / span) * pw;
+    ctx.fillStyle = "rgba(255,255,255,.03)";
+    ctx.fillRect(pad.l, pad.t, warm, ph);
+    ctx.fillRect(X(PLAN.downloadMs / 1000), pad.t, warm, ph);
+    if (upSamples.length) {
+      ctx.setLineDash([4, 5]); ctx.strokeStyle = "rgba(192,132,252,.5)";
+      ctx.beginPath(); ctx.moveTo(X(PLAN.downloadMs / 1000), pad.t); ctx.lineTo(X(PLAN.downloadMs / 1000), pad.t + ph); ctx.stroke(); ctx.setLineDash([]);
+    }
+    const series = (arr, offset, c1, c2, fill) => {
+      if (!arr.length) return;
+      const pts = arr.map((s) => ({ x: X(offset + s.t), y: Y(s.mbps) }));
+      const area = ctx.createLinearGradient(0, pad.t, 0, pad.t + ph);
+      area.addColorStop(0, fill); area.addColorStop(1, "rgba(5,6,10,0)");
+      ctx.beginPath(); ctx.moveTo(pts[0].x, pad.t + ph); pts.forEach((p) => ctx.lineTo(p.x, p.y)); ctx.lineTo(pts[pts.length - 1].x, pad.t + ph); ctx.closePath(); ctx.fillStyle = area; ctx.fill();
+      const stroke = ctx.createLinearGradient(pad.l, 0, w - pad.r, 0);
+      stroke.addColorStop(0, c1); stroke.addColorStop(1, c2);
+      ctx.beginPath();
+      pts.forEach((p, i) => { if (!i) ctx.moveTo(p.x, p.y); else { const q = pts[i - 1], mx = (q.x + p.x) / 2; ctx.bezierCurveTo(mx, q.y, mx, p.y, p.x, p.y); } });
+      ctx.strokeStyle = stroke; ctx.lineWidth = 2.4; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.shadowColor = c2; ctx.shadowBlur = 14; ctx.stroke(); ctx.shadowBlur = 0;
+      const last = pts[pts.length - 1];
+      ctx.beginPath(); ctx.arc(last.x, last.y, 4.5, 0, Math.PI * 2); ctx.fillStyle = "#f8fbff"; ctx.shadowColor = c2; ctx.shadowBlur = 14; ctx.fill(); ctx.shadowBlur = 0;
+    };
+    series(downSamples, 0, "#22d3ee", "#38bdf8", "rgba(34,211,238,.28)");
+    series(upSamples, PLAN.downloadMs / 1000, "#a78bfa", "#f0abfc", "rgba(167,139,250,.26)");
+    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = "rgba(203,213,235,.35)";
+    for (let i = 0; i <= 6; i++) { const s = (span / 6) * i; ctx.fillText(`${Math.round(s)}s`, X(s), pad.t + ph + 8); }
+    $("chartEmpty").style.display = (downSamples.length || upSamples.length) ? "none" : "flex";
+  };
+  new ResizeObserver(drawChart).observe(chart.parentElement);
+
+  /* ---------------- network engine ---------------- */
+  async function measureLatency(signal) {
+    const rtts = [];
+    const total = PLAN.pingSamples + PLAN.pingWarmup;
+    for (let i = 0; i < total; i++) {
+      if (signal.aborted) throw new DOMException("aborted", "AbortError");
+      const t0 = now(); let ok = false;
+      try { const r = await fetch(EP.ping(token()), { cache: "no-store", signal }); await r.arrayBuffer(); ok = r.ok; } catch { if (signal.aborted) throw new DOMException("aborted", "AbortError"); }
+      const rtt = now() - t0;
+      if (ok && i >= PLAN.pingWarmup) { rtts.push(rtt); $("vPing").textContent = fmtMs(rtt); }
+      await sleep(50);
+    }
+    if (!rtts.length) throw new Error("Latency probe failed — check your connection or server setting.");
+    const sorted = [...rtts].sort((a, b) => a - b);
+    const avg = rtts.reduce((a, b) => a + b, 0) / rtts.length;
+    let jsum = 0; for (let i = 1; i < rtts.length; i++) jsum += Math.abs(rtts[i] - rtts[i - 1]);
+    return { ping: (avg + median(rtts)) / 2, jitter: rtts.length > 1 ? jsum / (rtts.length - 1) : 0, best: sorted[0] };
+  }
+
+  /* Generic parallel throughput runner. `worker` is async loop, `counter()` returns bytes so far. */
+  async function runParallel({ signal, durationMs, warmupMs, counter, startWorker, onSample }) {
+    const ctl = new AbortController();
+    const onAbort = () => ctl.abort();
+    signal.addEventListener("abort", onAbort, { once: true });
+    const killTimer = setTimeout(() => ctl.abort(), durationMs);
+    const t0 = now();
+    let warmAt = 0, warmBytes = 0, lastBytes = 0, lastAt = t0, ema = 0;
+    const samples = [];
+    const workers = Array.from({ length: streams }, () => startWorker(ctl.signal));
+    while (!ctl.signal.aborted) {
+      await sleep(120);
+      if (ctl.signal.aborted) break;
+      const at = now(), bytes = counter();
+      const inst = ((bytes - lastBytes) * 8) / (Math.max(1, at - lastAt) / 1000) / 1e6;
+      ema = ema > 0 ? ema * 0.58 + inst * 0.42 : inst;
+      lastBytes = bytes; lastAt = at;
+      const el = at - t0;
+      if (!warmAt && el >= warmupMs) { warmAt = at; warmBytes = bytes; }
+      const s = { t: el / 1000, mbps: ema };
+      samples.push(s);
+      onSample(s, Math.min(1, el / durationMs), el < warmupMs);
+    }
+    await Promise.all(workers);
+    clearTimeout(killTimer);
+    signal.removeEventListener("abort", onAbort);
+    if (signal.aborted) throw new DOMException("aborted", "AbortError");
+    const endAt = now(), total = counter();
+    const from = warmAt || t0, base = warmAt ? warmBytes : 0;
+    const mbps = ((total - base) * 8) / (Math.max(1, endAt - from) / 1000) / 1e6;
+    return { mbps, samples };
+  }
+
+  async function runDownload(signal, onSample) {
+    let total = 0;
+    const startWorker = (sig) => (async () => {
+      while (!sig.aborted) {
+        try {
+          const r = await fetch(EP.download(PLAN.downloadChunk, token()), { cache: "no-store", signal: sig });
+          if (!r.ok) throw new Error("download " + r.status);
+          const reader = r.body.getReader();
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            total += value.byteLength;
+            if (sig.aborted) { reader.cancel().catch(() => {}); break; }
+          }
+        } catch { if (sig.aborted) return; await sleep(60); }
+      }
+    })();
+    return runParallel({ signal, durationMs: PLAN.downloadMs, warmupMs: PLAN.warmupMs, counter: () => total, startWorker, onSample });
+  }
+
+  let uploadBlob = null;
+  const makeBlob = () => {
+    const parts = []; let rem = PLAN.uploadPayload;
+    while (rem > 0) { const n = Math.min(65536, rem); const a = new Uint8Array(n); crypto.getRandomValues(a); parts.push(a); rem -= n; }
+    return new Blob(parts, { type: "application/octet-stream" });
+  };
+
+  async function runUpload(signal, onSample) {
+    if (!uploadBlob) uploadBlob = makeBlob();
+    const payload = uploadBlob;
+    let credited = 0, seq = 0;
+    const inflight = new Map();
+    const xhrs = new Set();
+    const counter = () => { let s = credited; inflight.forEach((v) => (s += v)); return s; };
+    const sendOne = (sig) => new Promise((resolve) => {
+      const id = seq++;
+      const xhr = new XMLHttpRequest();
+      let done = false;
+      const finish = (got) => { if (done) return; done = true; const seen = inflight.get(id) || 0; credited += Math.max(seen, got); inflight.delete(id); xhrs.delete(xhr); resolve(got > 0); };
+      xhr.open("POST", EP.upload(token()), true);
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+      xhr.upload.onprogress = (e) => { if (!done) inflight.set(id, Math.min(e.loaded, payload.size)); };
+      xhr.onload = () => finish(payload.size);
+      xhr.onerror = () => finish(0);
+      xhr.onabort = () => finish(0);
+      xhrs.add(xhr);
+      sig.addEventListener("abort", () => { try { xhr.abort(); } catch {} }, { once: true });
+      try { xhr.send(payload); } catch { finish(0); }
+    });
+    const startWorker = (sig) => (async () => {
+      while (!sig.aborted) { const ok = await sendOne(sig); if (!ok && !sig.aborted) await sleep(90); }
+    })();
+    return runParallel({ signal, durationMs: PLAN.uploadMs, warmupMs: PLAN.warmupMs, counter, startWorker, onSample });
+  }
+
+  /* ---------------- speed test orchestration ---------------- */
+  const liveTitle = (phase) => setPhase(phase);
+
+  async function startSpeedTest() {
+    if (running) { abortCtl?.abort(); return; }
+    running = true; abortCtl = new AbortController(); const sig = abortCtl.signal;
+    $("errBox").classList.add("hidden");
+    downSamples = []; upSamples = []; session = null;
+    ["vPing","vJitter","vDown","vUp","sDown","sUp","sPing","sJitter"].forEach((id) => ($(id).textContent = "—"));
+    $("hPing").textContent = "Probing…"; $("hJitter").textContent = "—"; $("hDown").textContent = "—"; $("hUp").textContent = "—";
+    $("copyBtn").disabled = true; $("savedBadge").textContent = "Private";
+    setGauge(0, false);
+    const stopped = () => sig.aborted;
+    try {
+      liveTitle("ping");
+      const lat = await measureLatency(sig);
+      $("vPing").textContent = fmtMs(lat.ping); $("sPing").textContent = fmtMs(lat.ping);
+      $("vJitter").textContent = fmtMs(lat.jitter); $("sJitter").textContent = fmtMs(lat.jitter);
+      $("hPing").textContent = `Best ${fmtMs(lat.best)} ms`; $("hJitter").textContent = lat.jitter < 5 ? "Stable" : "Variable";
+
+      liveTitle("download");
+      $("ring1").classList.remove("hidden");
+      const dl = await runDownload(sig, (s, prog, warm) => {
+        setGauge(s.mbps); $("gaugeHint").textContent = warm ? "TCP slow-start warm-up — result ignored" : "Measuring inbound throughput";
+        $("hDown").textContent = `${streams} streams · ${warm ? "warm-up" : "sampling"}`;
+        $("vDown").textContent = fmtSpeed(s.mbps);
+        downSamples.push(s); drawChart();
+      });
+      $("vDown").textContent = fmtSpeed(dl.mbps); $("sDown").textContent = fmtSpeed(dl.mbps); $("hDown").textContent = "Measured inbound";
+
+      liveTitle("upload");
+      const ul = await runUpload(sig, (s, prog, warm) => {
+        setGauge(s.mbps); $("gaugeHint").textContent = warm ? "TCP slow-start warm-up — result ignored" : "Measuring outbound throughput";
+        $("hUp").textContent = `${streams} streams · ${warm ? "warm-up" : "sampling"}`;
+        $("vUp").textContent = fmtSpeed(s.mbps);
+        upSamples.push(s); drawChart();
+      });
+      $("vUp").textContent = fmtSpeed(ul.mbps); $("sUp").textContent = fmtSpeed(ul.mbps); $("hUp").textContent = "Measured outbound";
+
+      session = { down: dl.mbps, up: ul.mbps, ping: lat.ping, jitter: lat.jitter };
+      setGauge(dl.mbps);
+      const g = gradeFor(session.down, session.up, session.ping);
+      $("gradeLabel").textContent = g.label; $("gradeBlurb").textContent = g.blurb;
+      $("gradeLetter").textContent = g.letter; $("gradeLetter").className = `flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${g.grad} font-display text-xl font-bold text-slate-900`;
+      $("copyBtn").disabled = false;
+      saveSpeedRun(session);
+      $("savedBadge").textContent = "Saved locally";
+      $("savedBadge").className = "rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2.5 py-1.5 text-[0.64rem] text-emerald-200";
+      setPhase("complete");
+    } catch (err) {
+      if (!stopped() && !(err && err.name === "AbortError")) {
+        $("errBox").textContent = err.message || "The measurement could not complete. Check your connection and retry.";
+        $("errBox").classList.remove("hidden");
+      }
+      setGauge(0, false);
+      setPhase("idle");
+    } finally {
+      running = false; abortCtl = null;
+      $("ring1").classList.add("hidden");
+      setPhase(session ? "complete" : "idle");
+    }
+  }
+
+  /* ---------------- speed history (localStorage) ---------------- */
+  const loadJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const saveSpeedRun = (s) => {
+    const list = loadJSON(HISTORY_KEY, []);
+    list.unshift({ id: Date.now(), down: s.down, up: s.up, ping: s.ping, jitter: s.jitter, streams, at: Date.now() });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 50)));
+    renderSpeedHistory();
+  };
+  const renderSpeedHistory = () => {
+    const list = loadJSON(HISTORY_KEY, []);
+    $("stTests").textContent = list.length;
+    if (!list.length) { $("historyEmpty").classList.remove("hidden"); $("historyWrap").classList.add("hidden"); }
+    else {
+      $("historyEmpty").classList.add("hidden"); $("historyWrap").classList.remove("hidden");
+      $("historyBody").innerHTML = list.slice(0, 8).map((r) => `
+        <tr class="border-t border-white/5 hover:bg-white/[0.03]">
+          <td class="whitespace-nowrap px-5 py-3 text-slate-400 sm:px-6">${relTime(r.at)}</td>
+          <td class="tabular px-3 py-3 font-medium text-cyan-200">${fmtSpeed(r.down)} <span class="text-[0.62rem] text-slate-500">Mbps</span></td>
+          <td class="tabular px-3 py-3 text-violet-200">${fmtSpeed(r.up)}</td>
+          <td class="tabular px-3 py-3 text-slate-300">${fmtMs(r.ping)} ms</td>
+          <td class="tabular px-3 py-3 text-slate-400">${fmtMs(r.jitter)} ms</td>
+          <td class="px-3 py-3 text-slate-400">${r.streams}×</td></tr>`).join("");
+    }
+    const avg = list.length ? list.reduce((a, r) => a + r.down, 0) / list.length : 0;
+    const peak = list.length ? Math.max(...list.map((r) => r.down)) : 0;
+    const avgPing = list.length ? list.reduce((a, r) => a + r.ping, 0) / list.length : 0;
+    $("stAvgDown").textContent = fmtSpeed(avg); $("stPeakDown").textContent = fmtSpeed(peak); $("stAvgPing").textContent = fmtMs(avgPing || null);
+  };
+
+  /* ---------------- video strength ---------------- */
+  const pv = $("preview");
+  let previewState = { live: false, tier: TIERS[5], buffer: 2.5, factor: 0, stalled: false };
+  let frame = 0;
+  const BARS = ["rgba(56,189,248,.85)","rgba(34,211,238,.8)","rgba(129,140,248,.8)","rgba(192,132,252,.8)","rgba(232,121,249,.75)","rgba(52,211,153,.7)","rgba(250,204,21,.65)"];
+  const renderPreview = () => {
+    const wrap = pv.parentElement;
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    if (pv.width !== Math.round(w * dpr) || pv.height !== Math.round(h * dpr)) { pv.width = Math.round(w * dpr); pv.height = Math.round(h * dpr); }
+    const ctx = pv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (previewState.live) frame++;
+    const t = previewState.live ? frame : 40;
+    const bg = ctx.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, "#05070d"); bg.addColorStop(.55, "#070a14"); bg.addColorStop(1, "#0b0a18");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+    const bw = w / BARS.length;
+    BARS.forEach((c, i) => { ctx.fillStyle = c; ctx.globalAlpha = .16; ctx.fillRect(i * bw + Math.sin((t + i * 26) / 60) * 4, 0, bw + 1, h * .68); });
+    ctx.globalAlpha = 1;
+    const cell = Math.max(14, Math.min(34, w / 24));
+    ctx.strokeStyle = "rgba(255,255,255,.055)"; ctx.lineWidth = 1;
+    for (let x = 0; x <= w; x += cell) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+    for (let y = 0; y <= h; y += cell) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+    ctx.beginPath();
+    for (let x = 0; x <= w; x += 3) { const y = h * .5 + Math.sin((x + t * 2.2) / 44) * h * .13 + Math.sin((x - t * 1.3) / 21) * h * .05; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    const wg = ctx.createLinearGradient(0, 0, w, 0); wg.addColorStop(0, "rgba(34,211,238,.9)"); wg.addColorStop(.6, "rgba(167,139,250,.85)"); wg.addColorStop(1, "rgba(240,171,252,.8)");
+    ctx.strokeStyle = previewState.stalled ? "rgba(251,113,133,.9)" : wg; ctx.lineWidth = 2; ctx.shadowColor = "rgba(167,139,250,.8)"; ctx.shadowBlur = 14; ctx.stroke(); ctx.shadowBlur = 0;
+    const sx = ((t * 1.6) % (w + 120)) - 60;
+    const sc = ctx.createLinearGradient(sx - 60, 0, sx + 60, 0);
+    sc.addColorStop(0, "rgba(255,255,255,0)"); sc.addColorStop(.5, "rgba(224,242,254,.16)"); sc.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = sc; ctx.fillRect(sx - 60, 0, 120, h);
+    if (previewState.stalled) { ctx.fillStyle = "rgba(12,4,10,.42)"; ctx.fillRect(0, 0, w, h); }
+    requestAnimationFrame(renderPreview);
+  };
+  requestAnimationFrame(renderPreview);
+
+  const updatePreview = (p) => {
+    previewState = { ...previewState, ...p };
+    const tier = previewState.tier;
+    $("pvLabel").textContent = `${tier.label} · ${tier.id}`;
+    $("pvRes").textContent = `${tier.width}×${tier.height}`;
+    $("pvTitle").textContent = previewState.live ? "Playback preview" : "Preview idle";
+    $("pvDot").className = `h-1.5 w-1.5 rounded-full ${previewState.live ? "live-dot bg-lime-300" : "bg-slate-500"}`;
+    $("pvState").textContent = previewState.stalled ? "Buffering" : previewState.live ? "Streaming" : "Standby";
+    $("pvState").className = `rounded-full border px-2 py-0.5 text-[0.56rem] font-medium uppercase tracking-[0.14em] ${previewState.stalled ? "border-rose-300/40 bg-rose-500/20 text-rose-200" : previewState.live ? "border-emerald-300/35 bg-emerald-400/15 text-emerald-200" : "border-white/12 bg-black/35 text-slate-300"}`;
+    $("pvBuf").textContent = `Buffer ${previewState.buffer.toFixed(1)}s`;
+    $("pvFactor").textContent = previewState.factor > 0 ? `${previewState.factor.toFixed(2)}× realtime` : "awaiting segment";
+    $("pvFactor").className = previewState.factor >= 1 ? "text-emerald-300" : previewState.factor > 0 ? "text-rose-300" : "";
+    $("pvBufBar").style.width = `${Math.min(100, (previewState.buffer / 6) * 100)}%`;
+  };
+
+  const ladderPlan = (tier) => {
+    const playbackBytes = Math.round((tier.bitrate * PLAN.segmentsPerTier > 0 ? tier.bitrate * 2 * 1e6 / 8 : 0));
+    const budget = Math.min(Math.max(playbackBytes, 48 * 1024), 12 * 1024 * 1024);
+    return Math.max(48 * 1024, Math.round(budget / PLAN.segmentsPerTier));
+  };
+
+  const renderLadder = (activeId) => {
+    $("ladder").innerHTML = [...videoLadder].reverse().map((e) => {
+      const v = VERDICTS[e.verdict];
+      const isActive = activeId === e.tier.id;
+      const fill = e.tested ? Math.min(100, (e.factor / 2) * 100) : 0;
+      return `
+      <div class="rounded-xl border px-3 py-2 transition-all duration-300 ${isActive ? "border-cyan-300/40 bg-cyan-300/[0.07] shadow-[0_0_32px_-18px_rgba(34,211,238,.9)]" : e.tested ? "border-white/8 bg-white/[0.028]" : "border-white/5 bg-white/[0.012]"}">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex min-w-0 items-center gap-2">
+            <span class="h-1.5 w-1.5 shrink-0 rounded-full ${isActive ? "live-dot bg-lime-300" : v.dot}"></span>
+            <span class="w-12 shrink-0 mono text-[0.74rem] ${e.tested ? "text-white" : "text-slate-400"}">${e.tier.id}</span>
+            <span class="hidden truncate text-[0.62rem] text-slate-500 sm:inline">${e.tier.label} · ${e.tier.width}×${e.tier.height} · ${e.tier.codec}${e.tier.hdr ? " · HDR" : ""}</span>
+          </div>
+          <div class="flex shrink-0 items-center gap-2">
+            <span class="tabular text-[0.66rem] text-slate-400">${e.tested ? fmtSpeed(e.mbps) + " Mbps" : e.tier.bitrate + " req"}</span>
+            <span class="rounded-full border px-1.5 py-0.5 text-[0.54rem] font-medium uppercase tracking-[0.08em] ${v.cls}">${v.short}</span>
+          </div>
+        </div>
+        <div class="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/8">
+          <div class="h-full rounded-full bg-gradient-to-r ${v.bar} transition-[width] duration-500" style="width:${fill}%"></div>
+          <span class="absolute inset-y-0 left-1/2 w-px bg-white/45"></span>
+        </div>
+        <div class="mt-1 flex items-center justify-between text-[0.54rem] text-slate-500">
+          <span>${e.tested ? `${e.factor.toFixed(2)}× realtime${isActive ? " · measuring" : ""}` : "not tested"}</span>
+          <span>${e.tested ? `${e.segs} seg · ${fmtBytes(e.bytes)}${e.stalls ? ` · ${e.stalls} stall${e.stalls === 1 ? "" : "s"}` : ""}` : `needs ${e.tier.bitrate} Mbps`}</span>
+        </div>
+      </div>`;
+    }).join("");
+  };
+
+  async function fetchSegment(tier, bytes, sig) {
+    const t0 = now();
+    const r = await fetch(EP.download(bytes, `${tier.id}-${token()}`), { cache: "no-store", signal: sig });
+    if (!r.ok) throw new Error("segment " + r.status);
+    const startup = now() - t0;
+    const reader = r.body.getReader(); let got = 0;
+    for (;;) { const { done, value } = await reader.read(); if (done) break; got += value.byteLength; }
+    return { bytes: got, ms: Math.max(1, now() - t0), startup };
+  }
+
+  async function runVideo() {
+    if (videoRunning) { videoAbort?.abort(); return; }
+    videoRunning = true; videoAbort = new AbortController(); const sig = videoAbort.signal;
+    $("videoErr").classList.add("hidden");
+    $("videoBtn").textContent = "■ Stop sweep";
+    $("vidDot").className = "live-dot h-1.5 w-1.5 rounded-full bg-lime-300"; $("vidState").textContent = "Testing";
+    videoLadder = TIERS.map((t) => ({ tier: t, tested: false, mbps: 0, factor: 0, verdict: "untested", bytes: 0, startup: 0, stalls: 0, segs: 0, samples: [] }));
+    videoSummary = null;
+    $("maxRes").textContent = "—"; $("maxDesc").textContent = "Testing…";
+    $("vPeak").textContent = "—"; $("vStart").textContent = "—"; $("vStall").textContent = "—";
+    const ladder = videoMode === "quick" ? TIERS.filter((t) => t.height >= 360) : TIERS;
+    renderLadder(null);
+    let buffer = 2.5, failures = 0, firstStartup = null;
+    try {
+      for (const tier of ladder) {
+        if (sig.aborted) throw new DOMException("aborted", "AbortError");
+        const slot = videoLadder.find((e) => e.tier.id === tier.id);
+        updatePreview({ live: true, tier, buffer, factor: 0, stalled: false });
+        renderLadder(tier.id);
+        const bytes = ladderPlan(tier);
+        const samples = [];
+        let stalls = 0, tBytes = 0, tStart = 0;
+        for (let s = 0; s < PLAN.segmentsPerTier; s++) {
+          if (sig.aborted) throw new DOMException("aborted", "AbortError");
+          try {
+            const r = await fetchSegment(tier, bytes, sig);
+            const playback = (r.bytes * 8) / (tier.bitrate * 1e6);
+            const dl = r.ms / 1000;
+            const factor = playback / Math.max(0.001, dl);
+            const mbps = (r.bytes * 8) / Math.max(0.001, dl) / 1e6;
+            buffer = Math.max(0, buffer + playback - dl - 0.02);
+            if (factor < 0.95) stalls++;
+            tBytes += r.bytes; if (s === 0) { tStart = r.startup; if (firstStartup === null) firstStartup = r.startup; }
+            samples.push({ factor, mbps });
+            updatePreview({ live: true, tier, buffer, factor, stalled: factor < 0.95 });
+            slot.factor = median(samples.map((x) => x.factor)); slot.mbps = median(samples.map((x) => x.mbps));
+            slot.verdict = verdictFromFactor(slot.factor); slot.tested = true; renderLadder(tier.id);
+          } catch (e) { if (sig.aborted) throw e; stalls++; }
+          await sleep(60);
+        }
+        Object.assign(slot, {
+          tested: samples.length > 0, mbps: median(samples.map((x) => x.mbps)), factor: median(samples.map((x) => x.factor)),
+          verdict: samples.length ? verdictFromFactor(median(samples.map((x) => x.factor))) : "buffering",
+          bytes: tBytes, startup: tStart, stalls, segs: samples.length,
+        });
+        renderLadder(null);
+        if (slot.verdict === "buffering" || slot.verdict === "borderline") failures++; else failures = 0;
+        if (videoMode === "quick" && failures >= 2) break;
+      }
+      const tested = videoLadder.filter((e) => e.tested);
+      const passing = tested.filter((e) => e.verdict === "smooth" || e.verdict === "tight");
+      const max = passing.length ? passing[passing.length - 1].tier : null;
+      const peak = Math.max(0, ...tested.map((e) => e.mbps));
+      const stalls = tested.reduce((a, e) => a + e.stalls, 0);
+      const segs = tested.reduce((a, e) => a + e.segs, 0);
+      const totalBytes = tested.reduce((a, e) => a + e.bytes, 0);
+      videoSummary = { max: max ? max.id : "none", peak, stalls, segs, totalBytes, sustained: max ? max.bitrate : 0 };
+      updatePreview({ live: false, stalled: false, buffer });
+      $("maxRes").textContent = max ? max.id : "None";
+      $("maxDesc").textContent = max ? `${max.label} · ${max.width}×${max.height} · ${max.codec}${max.hdr ? " · HDR" : ""}` : "Nothing reached real-time playback";
+      $("vPeak").textContent = fmtSpeed(peak); $("vStart").textContent = fmtMs(firstStartup); $("vStall").textContent = stalls; $("vStallUnit").textContent = `/${segs}`;
+      const f = max ? tested.find((e) => e.tier.id === max.id).factor : 0;
+      $("verdict").textContent = max
+        ? `This connection sustains ${max.id} (${max.label}) at ${fmtSpeed(peak)} Mbps peak, running ${f.toFixed(2)}× faster than real-time playback.`
+        : "No rendition held real-time playback. Try closing other transfers or moving closer to the router.";
+      saveVideoRun(videoSummary);
+    } catch (err) {
+      if (!(err && err.name === "AbortError")) { $("videoErr").textContent = err.message || "Sweep failed."; $("videoErr").classList.remove("hidden"); }
+      updatePreview({ live: false, stalled: false });
+    } finally {
+      videoRunning = false; videoAbort = null;
+      $("videoBtn").textContent = "⚡ Test video stream strength";
+      $("vidDot").className = "h-1.5 w-1.5 rounded-full bg-slate-500"; $("vidState").textContent = videoSummary ? "Complete" : "Idle";
+      renderLadder(null);
+    }
+  }
+
+  const saveVideoRun = (s) => {
+    const list = loadJSON(VIDEO_KEY, []);
+    list.unshift({ id: Date.now(), max: s.max, peak: s.peak, stalls: s.stalls, segs: s.segs, at: Date.now() });
+    localStorage.setItem(VIDEO_KEY, JSON.stringify(list.slice(0, 20)));
+    renderVideoHistory();
+  };
+  const renderVideoHistory = () => {
+    const list = loadJSON(VIDEO_KEY, []);
+    $("videoHistory").innerHTML = list.length ? list.slice(0, 5).map((r) => `
+      <li class="flex items-center justify-between gap-3 py-2">
+        <div class="flex min-w-0 items-center gap-2">
+          <span class="rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 mono text-[0.6rem] text-cyan-200">${r.max}</span>
+          <span class="truncate">${fmtSpeed(r.peak)} Mbps · ${r.stalls} stalls · ${relTime(r.at)}</span>
+        </div>
+        <span class="shrink-0 text-[0.6rem] text-slate-600">${r.segs} seg</span>
+      </li>`).join("") : `<li class="py-3">No video sweeps recorded yet.</li>`;
+  };
+
+  /* ---------------- wiring ---------------- */
+  buildTicks();
+  setGauge(0, false);
+  setPhase("idle");
+
+  $("startBtn").addEventListener("click", startSpeedTest);
+  $("streamSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-n]"); if (!b || running) return;
+    streams = Number(b.dataset.n);
+    document.querySelectorAll("#streamSeg button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("iStreams").textContent = `${streams} connections`;
+  });
+  $("videoSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-mode]"); if (!b || videoRunning) return;
+    videoMode = b.dataset.mode;
+    document.querySelectorAll("#videoSeg button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("videoNote").textContent = `3 segments per rendition · ${videoMode === "sweep" ? "144p" : "360p"} → 16K · stops after two failures`;
+  });
+  $("videoBtn").addEventListener("click", runVideo);
+  $("copyBtn").addEventListener("click", async () => {
+    if (!session) return;
+    const text = `Velocity — internet speed test\nDownload ${fmtSpeed(session.down)} Mbps · Upload ${fmtSpeed(session.up)} Mbps\nPing ${fmtMs(session.ping)} ms · Jitter ${fmtMs(session.jitter)} ms\n${streams} parallel streams · host ${new URL(BASE).host}`;
+    try { await navigator.clipboard.writeText(text); $("copyBtn").textContent = "Copied ✓"; setTimeout(() => ($("copyBtn").textContent = "Copy result"), 2000); } catch {}
+  });
+  $("clearBtn").addEventListener("click", () => { localStorage.removeItem(HISTORY_KEY); renderSpeedHistory(); });
+  $("clearVideoBtn").addEventListener("click", () => { localStorage.removeItem(VIDEO_KEY); renderVideoHistory(); });
+  $("baseUrl").value = BASE;
+  $("saveBase").addEventListener("click", () => {
+    try { const u = new URL($("baseUrl").value.trim()); localStorage.setItem(CONFIG_KEY, u.origin); applyBase(u.origin); $("saveBase").textContent = "Saved ✓"; setTimeout(() => ($("saveBase").textContent = "Save server"), 1500); }
+    catch { $("saveBase").textContent = "Invalid URL"; setTimeout(() => ($("saveBase").textContent = "Save server"), 1500); }
+  });
+  $("resetBase").addEventListener("click", () => { localStorage.removeItem(CONFIG_KEY); $("baseUrl").value = DEFAULT_BASE; applyBase(DEFAULT_BASE); });
+
+  const conn = navigator.connection || {};
+  $("iProto").textContent = location.protocol.replace(":", "").toUpperCase() || "FILE";
+  $("iNet").textContent = conn.effectiveType ? conn.effectiveType.toUpperCase() : "Not exposed";
+  $("iClient").textContent = describeClient();
+  applyBase(BASE);
+  $("iStreams").textContent = `${streams} connections`;
+  renderSpeedHistory();
+  renderVideoHistory();
+  renderLadder(null);
+})();
+</script>
+</body>
+</html>
